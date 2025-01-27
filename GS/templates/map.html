@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SSK</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+    <script>
+        window.markers = {{ markers|tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='map.js') }}"></script>
+</head>
+<body>
+    <div class="navbar">
+        <div class="content">
+            <h1>SSK</h1>
+        </div>
+    </div>
+    <div id="map"></div>
+</body>
+</html>
