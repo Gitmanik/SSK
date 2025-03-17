@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  flask_app:
+    build: .
+    container_name: flask_app
+    ports:
+      - "5000:5000"
+    volumes:
+      - "./gps_data.db:/app/gps_data.db"
+    restart: always

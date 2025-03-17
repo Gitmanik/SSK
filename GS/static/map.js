@@ -11,6 +11,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fetch markers from a global variable or API (provided by Flask)
     var markers = window.markers || [];
     markers.forEach(function(marker) {
-        L.marker([marker.latitude, marker.longitude]).addTo(map).bindPopup(`Drone ID: ${marker.machine_id}`);;
+        L.marker([marker.latitude, marker.longitude]).addTo(map).bindPopup(`Drone ID: ${marker.machine_id}\nGPS: ${marker.latitude},${marker.longitude}`);
     });
 });
