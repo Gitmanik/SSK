@@ -4,9 +4,9 @@ import requests
 import routeros_api
 
 # Dane logowania do MikroTik
-host = "192.168.88.1"  # Adres IP MikroTika
+host = "192.168.0.1"  # Adres IP MikroTika
 username = "admin"
-password = "haslo"
+password = "12345qwerty"
 
 # Połączenie z MikroTik API
 connection = routeros_api.RouterOsApiPool(host, username=username, password=password, port=8728, plaintext_login=True)
