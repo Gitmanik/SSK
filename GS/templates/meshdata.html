@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesh Data Display</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fb;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin: 40px 0;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+        }
+        .machine-section {
+            margin-bottom: 40px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .machine-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+        .timestamp-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+            color: #28a745;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .data-table th, .data-table td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .data-table th {
+            background-color: #007bff;
+            color: white;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .data-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        .timestamp-section {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Mesh Data by Machine and Timestamp</h1>
+    <div class="container">
+        {% for machine_id, timestamps in grouped_data.items() %}
+            <div class="machine-section">
+                <div class="machine-title">Machine: {{ machine_id }}</div>
+                {% for timestamp, devices in timestamps.items() %}
+                    <div class="timestamp-section">
+                        <div class="timestamp-title">Timestamp: {{ timestamp }}</div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Interface</th>
+                                    <th>Radio Name</th>
+                                    <th>MAC Address</th>
+                                    <th>Uptime</th>
+                                    <th>Signal Strength</th>
+                                    <th>Tx Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for device in devices %}
+                                    <tr>
+                                        <td>{{ device['id'] }}</td>
+                                        <td>{{ device['interface'] }}</td>
+                                        <td>{{ device['radio-name'] }}</td>
+                                        <td>{{ device['mac-address'] }}</td>
+                                        <td>{{ device['uptime'] }}</td>
+                                        <td>{{ device['signal-strength'] }}</td>
+                                        <td>{{ device['tx-rate'] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
