@@ -1,5 +1,5 @@
-from flask import Flask, request, jsonify, render_template
 import json
+from flask import Flask, request, jsonify, render_template, abort
 import sqlite3
 import os
 from collections import defaultdict
@@ -104,6 +104,26 @@ def index():
     conn.close()
 
     return render_template('meshdata.html', grouped_data=grouped_data)
+
+
+# Using OsmAnd map format https://osmand.net/docs/technical/osmand-file-formats/osmand-sqlite/
+@app.route("/tiles/<int:zoom>/<int:row>/<int:column>.png")
+def query_tile(zoom, column, row):
+    zoom = 17 - zoom
+    query = 'SELECT image FROM tiles '\
+            'WHERE z = ? AND y = ? AND x = ?;'
+    g = sqlite3.connect("Trojmiasto.sqlitedb")
+    cur = g.execute(query, (zoom, column, row))
+    results = cur.fetchall()
+    if not results:
+        print(f"No tile for {zoom}/{column}/{row} found")
+        abort(404)
+    the_image = results[0][0]
+    return app.response_class(
+        the_image,
+        mimetype='image/png'
+    )
+
 if __name__ == "__main__":
     app.jinja_env.auto_reload = True
     app.config['TEMPLATES_AUTO_RELOAD'] = True
