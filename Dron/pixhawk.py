@@ -1,12 +1,19 @@
+import json
+
 from pymavlink import mavutil
 import time
 import requests
 import routeros_api
 
+# GS IP
+gs_ip = "127.0.0.1"
+# gs_ip = "192.168.0.80"
+gs_port = 5000
+
 # Dane logowania do MikroTik
-host = "192.168.0.1"  # Adres IP MikroTika
+host = "192.168.0.254"  # Adres IP MikroTika
 username = "admin"
-password = "12345qwerty"
+password = ""
 
 # Połączenie z MikroTik API
 connection = routeros_api.RouterOsApiPool(host, username=username, password=password, port=8728, plaintext_login=True)
@@ -32,11 +39,11 @@ with open('/etc/machine-id', 'r') as f:
 print(f"machine_id: {machine_id}")
 
 def post_gps(lat, lon):
-    requests.post('http://192.168.0.80:5000/api/gps', json = {'type': 'gps', 'id': machine_id, 'lat': msg.lat/1e7, 'lon': msg.lon/1e7})
+    requests.post(f'http://{gs_ip}:{gs_port}/api/gps', json = {'type': 'gps', 'id': machine_id, 'lat': msg.lat/1e7, 'lon': msg.lon/1e7})
 
 def post_mesh(data):
-    requests.post('http://192.168.0.80:5000/api/mesh', json = {'mesh': data})
-
+    resp = requests.post(f'http://{gs_ip}:{gs_port}/api/mesh', json = {'id': "meshtest", 'mesh_data': json.dumps(data)})
+    print(f"post_mesh: {resp.text}")
 while True:
     msg = master.recv_match(blocking=True)
     if not msg:
