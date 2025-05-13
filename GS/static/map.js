@@ -52,12 +52,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Load polygons from the database on page load
     fetch('/get-polygons')
     .then(response => response.json())
     .then(data => {
         data.forEach(function (polygon) {
-            L.geoJSON(JSON.parse(polygon.geojson)).addTo(map);
+            // Create a GeoJSON layer from the database data
+            var layer = L.geoJSON(polygon, {
+                onEachFeature: function (feature, layer) {
+                    // Ensure the layer retains the feature properties (e.g., id for editing/deleting).
+                    layer.feature = feature;
+                }
+            });
+
+            // Add each layer from the GeoJSON to the `drawnItems` layer group
+            layer.eachLayer(function (l) {
+                drawnItems.addLayer(l); // Add to the editable FeatureGroup
+            });
         });
+    })
+    .catch(error => {
+        console.error('Error loading polygons:', error);
     });
 
 

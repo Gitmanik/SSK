@@ -136,9 +136,16 @@ def get_polygons():
     try:
         conn = sqlite3.connect(db_file)
         cursor = conn.cursor()
-        cursor.execute("SELECT geojson FROM polygons")
+        cursor.execute("SELECT id, geojson FROM polygons")
         rows = cursor.fetchall()
-        polygons = [{'geojson': row[0]} for row in rows]
+
+        polygons = []
+        for row in rows:
+            geojson = json.loads(row[1])  # Parse the GeoJSON from the database
+            geojson['properties'] = geojson.get('properties', {})  # Ensure properties exist
+            geojson['properties']['id'] = row[0]  # Add the polygon's unique ID to properties
+            polygons.append(geojson)
+
         return jsonify(polygons), 200
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
