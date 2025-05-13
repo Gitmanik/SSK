@@ -33,6 +33,13 @@ def init_db():
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+
+            cursor.execute('''
+                CREATE TABLE polygons (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    geojson TEXT NOT NULL
+                )
+            ''')
             conn.commit()
 
 init_db()
@@ -123,6 +130,41 @@ def query_tile(zoom, column, row):
         the_image,
         mimetype='image/png'
     )
+
+@app.route('/get-polygons', methods=['GET'])
+def get_polygons():
+    try:
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
+        cursor.execute("SELECT geojson FROM polygons")
+        rows = cursor.fetchall()
+        polygons = [{'geojson': row[0]} for row in rows]
+        return jsonify(polygons), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/save-polygon', methods=['POST'])
+def save_polygon():
+    data = request.get_json()
+
+    # Example of extracting GeoJSON data
+    geojson = json.dumps(data)  # You can validate or parse this further
+
+    # Save to database (assume we have table 'polygons' with 'id' and 'geojson')
+    conn = sqlite3.connect(db_file)  # Replace with your actual database connection
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO polygons (geojson) VALUES (?)", (geojson,))
+        conn.commit()
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        conn.close()
+
 
 if __name__ == "__main__":
     app.jinja_env.auto_reload = True
