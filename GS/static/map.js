@@ -75,5 +75,55 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error loading polygons:', error);
     });
 
+    // Handle edits
+    map.on('draw:edited', function (e) {
+        var layers = e.layers;
+        layers.eachLayer(function (layer) {
+            // Ensure the GeoJSON includes the original ID
+            var geojsonData = layer.toGeoJSON();
+            geojsonData.properties = geojsonData.properties || {};
+            geojsonData.properties.id = layer.feature.properties.id; // Retain the original polygon ID
 
+            // Send the updated GeoJSON data back to the server
+            fetch('/update-polygon', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(geojsonData) // Send the complete GeoJSON
+            }).then(response => {
+                if (response.ok) {
+                    alert('Polygon updated successfully!');
+                } else {
+                    alert('Error updating polygon.');
+                }
+            });
+        });
+    });
+
+    // Handle deletions
+    map.on('draw:deleted', function (e) {
+        var layers = e.layers;
+        layers.eachLayer(function (layer) {
+            // Ensure the GeoJSON includes the ID for deletion
+            var geojsonData = layer.toGeoJSON();
+            geojsonData.properties = geojsonData.properties || {};
+            geojsonData.properties.id = layer.feature.properties.id; // Retain the original polygon ID
+
+            // Send delete request to the server
+            fetch('/delete-polygon', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(geojsonData) // Use the GeoJSON with ID for deletion
+            }).then(response => {
+                if (response.ok) {
+                    alert('Polygon deleted successfully!');
+                } else {
+                    alert('Error deleting polygon.');
+                }
+            });
+        });
+    });
 });

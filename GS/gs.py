@@ -172,6 +172,47 @@ def save_polygon():
     finally:
         conn.close()
 
+@app.route('/delete-polygon', methods=['POST'])
+def delete_polygon():
+    data = request.get_json()
+
+    # Read the polygon's ID from the properties
+    polygon_id = data['properties']['id']
+
+    try:
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM polygons WHERE id = ?", (polygon_id,))
+        conn.commit()
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/update-polygon', methods=['POST'])
+def update_polygon():
+    data = request.get_json()
+
+    # Read the polygon's ID from the properties
+    polygon_id = data['properties']['id']
+
+    # Serialize the updated GeoJSON
+    geojson = json.dumps(data)
+
+    try:
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE polygons SET geojson = ? WHERE id = ?", (geojson, polygon_id))
+        conn.commit()
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     app.jinja_env.auto_reload = True
