@@ -40,6 +40,23 @@ def init_db():
                     geojson TEXT NOT NULL
                 )
             ''')
+            cursor.execute('''
+                CREATE TABLE goals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    latitude REAL NOT NULL,
+                    longitude REAL NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE data_next_position (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    machine_id TEXT NOT NULL,
+                    latitude REAL NOT NULL,
+                    longitude REAL NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
             conn.commit()
 
 init_db()
@@ -60,6 +77,19 @@ def receive_gps_data():
     conn.close()
 
     return jsonify({"message": "Data saved successfully"}), 201
+
+@app.route("/api/gps/latest/<machine_id>", methods=["GET"])
+def get_latest_gps(machine_id):
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+    cursor.execute("SELECT latitude, longitude FROM gps_data WHERE machine_id = ? ORDER BY timestamp DESC LIMIT 1", (machine_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        lat, lon = row
+        return jsonify({'id':machine_id, 'lat':lat, 'lon':lon}), 200
+    else:
+        return jsonify({'error': 'No GPS data found for this drone'}), 404
 
 @app.route("/api/mesh", methods=["POST"])
 def receive_mesh_data():
@@ -213,6 +243,105 @@ def update_polygon():
         return jsonify({'status': 'error', 'message': str(e)}), 500
     finally:
         conn.close()
+
+@app.route('/get-goal', methods=['GET'])
+def get_goal():
+    try:
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, latitude, longitude FROM goals ORDER BY timestamp DESC LIMIT 1")
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({'error': 'No goal found'}), 404
+        goal_id, lat, lon = row
+        return jsonify({'id': goal_id, 'latitude': lat, 'longitude': lon}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/update-goal', methods=['POST'])
+def update_goal():
+    try:
+        data = request.get_json()
+        lat = data.get('lat')
+        lon = data.get('lon')
+
+        if lat is None or lon is None:
+            return jsonify({"error": "Missing coordinates"}), 400
+        lat = float(lat)
+        lon = float(lon)
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO goals (latitude, longitude) VALUES (?, ?)", (lat, lon))
+        conn.commit()
+
+        return jsonify({"status": "ok"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/delete-goal', methods=['POST'])
+def delete_goal():
+    try:
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM goals")
+        conn.commit()
+        return jsonify({'status': 'deleted'}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route('/get-next_position', methods=['GET'])
+def get_next_position():
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT machine_id, latitude, longitude
+        FROM data_next_position
+        WHERE id IN (
+            SELECT MAX(id)
+            FROM data_next_position
+            GROUP BY machine_id
+        )
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+
+    positions = []
+    for row in rows:
+        positions.append({'id': row[0], 'lat': row[1], 'lon': row[2]})
+
+    if positions:
+        return jsonify(positions)
+    else:
+        return jsonify({'error': 'No next positions found'}), 404
+
+@app.route("/post-next_position", methods=["POST"])
+def post_next_position():
+    data = request.get_json()
+    if not data or "lat" not in data or "lat" not in data or "id" not in data:
+        return jsonify({"error": "Invalid data"}), 400
+
+    id = data["id"]
+    latitude = data["lat"]
+    longitude = data["lon"]
+
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO data_next_position (machine_id, latitude, longitude) VALUES (?, ?, ?)", (id, latitude, longitude))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Data saved successfully"}), 201
 
 if __name__ == "__main__":
     app.jinja_env.auto_reload = True
