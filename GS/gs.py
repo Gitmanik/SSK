@@ -112,7 +112,7 @@ def receive_mesh_data():
 def display_map():
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
-    cursor.execute("SELECT machine_id, latitude, longitude FROM gps_data GROUP BY machine_id ORDER BY timestamp DESC")
+    cursor.execute("SELECT gd.machine_id, gd.latitude, gd.longitude FROM gps_data gd JOIN (SELECT machine_id, MAX(timestamp) AS max_time FROM gps_data GROUP BY machine_id) latest ON gd.machine_id = latest.machine_id AND gd.timestamp = latest.max_time")
     data = cursor.fetchall()
     conn.close()
 
