@@ -1,3 +1,56 @@
+let goalMarker = null;
+
+var targetIcon = L.icon({
+    iconUrl: 'static/icons8-target-50.png',
+    shadowUrl: 'static/icons8-target-50.png',
+
+    iconSize:     [32,32], // size of the icon
+    shadowSize:   [0,0], // size of the shadow
+    iconAnchor:   [16,16], // point of the icon which will correspond to marker's location
+    shadowAnchor: [0,0],  // the same for the shadow
+    popupAnchor:  [0,0] // point from which the popup should open relative to the iconAnchor
+});
+
+function getGoal(map) {
+    if (goalMarker) {
+        map.removeLayer(goalMarker);
+    }
+    fetch('/get-goal')
+        .then(response => {
+            if (!response.ok) throw new Error("Brak zapisanego celu");
+            return response.json();
+        })
+        .then(data => {
+            const latlng = [data.latitude, data.longitude];
+            goalMarker = L.marker(latlng, { draggable: true, icon: targetIcon}).addTo(map)
+                .bindPopup("Target").openPopup();
+
+            goalMarker.on('dragend', function (e) {
+                const newLatLng = e.target.getLatLng();
+                fetch('/update-goal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lat: newLatLng.lat, lon: newLatLng.lng })
+                })
+                .then(res => res.ok ? console.log("Cel zaktualizowany") : console.error("Błąd zapisu"))
+                .catch(err => console.error("Błąd sieci:", err));
+            });
+
+            goalMarker.on('contextmenu', function () {
+                if (confirm("Czy chcesz usunąć cel?")) {
+                    map.removeLayer(goalMarker);
+                    goalMarker = null;
+                    fetch('/delete-goal', { method: 'POST' })
+                        .then(res => res.ok ? console.log("Cel usunięty") : console.error("Błąd usuwania celu"))
+                        .catch(err => console.error("Błąd sieci przy usuwaniu:", err));
+                }
+            });
+        })
+        .catch(err => {
+            console.log("Cel nie istnieje:", err);
+        });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOMContentLoaded');
     var map = L.map('map').setView([54.372158, 18.638306], 14);
@@ -18,17 +71,6 @@ document.addEventListener('DOMContentLoaded', function() {
     shadowAnchor: [0,0],  // the same for the shadow
     popupAnchor:  [0,0] // point from which the popup should open relative to the iconAnchor
 });
-    var targetIcon = L.icon({
-        iconUrl: 'static/icons8-target-50.png',
-        shadowUrl: 'static/icons8-target-50.png',
-
-        iconSize:     [32,32], // size of the icon
-        shadowSize:   [0,0], // size of the shadow
-        iconAnchor:   [16,16], // point of the icon which will correspond to marker's location
-        shadowAnchor: [0,0],  // the same for the shadow
-        popupAnchor:  [0,0] // point from which the popup should open relative to the iconAnchor
-    });
-
 
     var dronesLayer = L.layerGroup().addTo(map);
     var nextPositionLayer = L.layerGroup().addTo(map);
@@ -99,8 +141,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     updateDrones();
     setInterval(updateDrones, 1000);
-
-    let goalMarker = null;
     
     // Initialize Leaflet.Draw
     var drawnItems = new L.FeatureGroup();
@@ -165,41 +205,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error loading polygons:', error);
     });
 
-    fetch('/get-goal')
-    .then(response => {
-        if (!response.ok) throw new Error("Brak zapisanego celu");
-        return response.json();
-    })
-    .then(data => {
-        const latlng = [data.latitude, data.longitude];
-        goalMarker = L.marker(latlng, { draggable: true, icon: targetIcon}).addTo(map)
-            .bindPopup("Target").openPopup();
-
-        goalMarker.on('dragend', function (e) {
-            const newLatLng = e.target.getLatLng();
-            fetch('/update-goal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lat: newLatLng.lat, lon: newLatLng.lng })
-            })
-            .then(res => res.ok ? console.log("Cel zaktualizowany") : console.error("Błąd zapisu"))
-            .catch(err => console.error("Błąd sieci:", err));
-        });
-
-        goalMarker.on('contextmenu', function () {
-            if (confirm("Czy chcesz usunąć cel?")) {
-                map.removeLayer(goalMarker);
-                goalMarker = null;
-                fetch('/delete-goal', { method: 'POST' })
-                    .then(res => res.ok ? console.log("Cel usunięty") : console.error("Błąd usuwania celu"))
-                    .catch(err => console.error("Błąd sieci przy usuwaniu:", err));
-            }
-        });
-    })
-    .catch(err => {
-        console.log("Cel nie istnieje:", err);
-    });
-
     // Handle edits
     map.on('draw:edited', function (e) {
         var layers = e.layers;
@@ -226,35 +231,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-   map.on('click', function (e) {
+   map.on('contextmenu', function (e) {
     const lat = e.latlng.lat;
     const lon = e.latlng.lng;
     if (!confirm("Czy ustanowić nowy cel w tym miejscu?")) {
         return;
     }
-    if (goalMarker) {
-        map.removeLayer(goalMarker);
-    }
-    goalMarker = L.marker([lat, lon], { draggable: true }).addTo(map).bindPopup("Cel").openPopup();
-
-    goalMarker.on('dragend', function (e) {
-        const newLatLng = e.target.getLatLng();
-        fetch('/update-goal', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lat: newLatLng.lat, lon: newLatLng.lng })
-        })
-        .then(res => {
-            if (!res.ok) {
-                console.error("Błąd zapisu celu po przesunięciu");
-            } else {
-                console.log("Cel zaktualizowany po przesunięciu");
-            }
-        })
-        .catch(err => {
-            console.error("Błąd sieci podczas zapisu celu po przesunięciu:", err);
-        });
-    });
     fetch('/update-goal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -262,6 +244,8 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(response => {
         if (!response.ok) throw new Error("Błąd zapisu celu");
+
+        getGoal(map);
         return response.json();
     })
     .then(data => {
@@ -270,8 +254,10 @@ document.addEventListener('DOMContentLoaded', function() {
     .catch(err => {
         console.error("Błąd zapisu celu:", err);
     });
-});
 
+    });
+
+   getGoal(map);
 
     // Handle deletions
     map.on('draw:deleted', function (e) {
