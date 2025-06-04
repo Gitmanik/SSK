@@ -1,12 +1,10 @@
-FROM python:3.13.1-slim
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
-WORKDIR /app
+WORKDIR /python-docker
+COPY . .
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . /app
+RUN uv sync
 
 EXPOSE 5000
 
-CMD ["python", "gs.py"]
+CMD [ "uv", "run", "flask", "--app" , "gs", "run", "--host=0.0.0.0"]

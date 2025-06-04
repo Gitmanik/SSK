@@ -1,0 +1,8 @@
+[project]
+name = "SSK-GS"
+version = "0.1.0"
+description = "SSK Ground-Station"
+requires-python = ">=3.11"
+dependencies = [
+    "flask>=3.1.1",
+]
