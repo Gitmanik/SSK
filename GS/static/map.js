@@ -18,6 +18,16 @@ document.addEventListener('DOMContentLoaded', function() {
     shadowAnchor: [0,0],  // the same for the shadow
     popupAnchor:  [0,0] // point from which the popup should open relative to the iconAnchor
 });
+    var targetIcon = L.icon({
+        iconUrl: 'static/icons8-target-50.png',
+        shadowUrl: 'static/icons8-target-50.png',
+
+        iconSize:     [32,32], // size of the icon
+        shadowSize:   [0,0], // size of the shadow
+        iconAnchor:   [16,16], // point of the icon which will correspond to marker's location
+        shadowAnchor: [0,0],  // the same for the shadow
+        popupAnchor:  [0,0] // point from which the popup should open relative to the iconAnchor
+    });
 
 
     var dronesLayer = L.layerGroup().addTo(map);
@@ -162,8 +172,8 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(data => {
         const latlng = [data.latitude, data.longitude];
-        goalMarker = L.marker(latlng, { draggable: true }).addTo(map)
-            .bindPopup("Cel").openPopup();
+        goalMarker = L.marker(latlng, { draggable: true, icon: targetIcon}).addTo(map)
+            .bindPopup("Target").openPopup();
 
         goalMarker.on('dragend', function (e) {
             const newLatLng = e.target.getLatLng();
