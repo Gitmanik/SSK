@@ -7,10 +7,54 @@ document.addEventListener('DOMContentLoaded', function() {
         attribution: 'UMP-pcPL'
     }).addTo(map);
 
-    var markers = window.markers || [];
-    markers.forEach(function(marker) {
-        L.marker([marker.latitude, marker.longitude]).addTo(map).bindPopup(`Drone ID: ${marker.machine_id}\nGPS: ${marker.latitude},${marker.longitude}`);
-    });
+
+    var droneIcon = L.icon({
+    iconUrl: 'static/drone.png',
+    shadowUrl: 'static/drone.png',
+
+    iconSize:     [32,32], // size of the icon
+    shadowSize:   [0,0], // size of the shadow
+    iconAnchor:   [16,16], // point of the icon which will correspond to marker's location
+    shadowAnchor: [0,0],  // the same for the shadow
+    popupAnchor:  [0,0] // point from which the popup should open relative to the iconAnchor
+});
+
+
+    var dronesLayer = L.layerGroup().addTo(map);
+    function updateDrones() {
+        fetch('/get-drones')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Błąd odpowiedzi z serwera przy pobieraniu pozycji');
+                }
+                return response.json();
+            })
+            .then(data => {
+                dronesLayer.clearLayers();
+
+                var devices_list = document.getElementById("devices_list");
+                devices_list.innerHTML = '';
+
+                data.forEach(function (marker) {
+                    var li = document.createElement('li');
+                    li.innerHTML = `${marker.machine_id}<br>${marker.latitude},${marker.longitude}`;
+                    li.onclick = (e) => console.log(e) ;
+                    devices_list.appendChild(li);
+
+                });
+
+                data.forEach(function(marker) {
+                    var m = L.marker([marker.latitude, marker.longitude], {icon: droneIcon}).
+                    addTo(map).bindPopup(`${marker.machine_id}`);
+                    dronesLayer.addLayer(m);
+                });
+            })
+            .catch(err => {
+                console.error('Błąd podczas aktualizacji pozycji:', err);
+            });
+    }
+    updateDrones();
+    setInterval(updateDrones, 1000);
 
     let goalMarker = null;
     

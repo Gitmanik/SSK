@@ -110,6 +110,10 @@ def receive_mesh_data():
 
 @app.route("/")
 def display_map():
+    return render_template("map.html")
+
+@app.route('/get-drones')
+def get_drones():
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute("SELECT gd.machine_id, gd.latitude, gd.longitude FROM gps_data gd JOIN (SELECT machine_id, MAX(timestamp) AS max_time FROM gps_data GROUP BY machine_id) latest ON gd.machine_id = latest.machine_id AND gd.timestamp = latest.max_time")
@@ -119,8 +123,7 @@ def display_map():
     markers = [
         {"machine_id": row[0], "latitude": row[1], "longitude": row[2]} for row in data
     ]
-
-    return render_template("map.html", markers=markers)
+    return jsonify(markers)
 
 @app.route('/meshdata')
 def index():
