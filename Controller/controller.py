@@ -7,8 +7,8 @@ from geopy.distance import distance
 import threading
 from collections import deque
 
-gs_ip="127.0.0.1"
-gs_port=5000
+import config
+
 MIN_RSSI = -70
 PREF_RSSI = -60
 BUFFER_RADIUS = 0.00001 # ~1m
@@ -18,19 +18,9 @@ def rssi_updater():
         update_rssi_map()
         time.sleep(6)
 
-def get_current_position(machine_id):
-    try:
-        resp=requests.get(f'http://{gs_ip}:{gs_port}/api/gps/latest/{machine_id}', timeout=5)
-        resp.raise_for_status()
-        data = resp.json()
-        return {'lat': data['lat'], 'lon': data['lon']}
-    except Exception as e:
-        print(f"Bład pobierania pozycji drona: {machine_id}",e)
-        return None
-
 def get_polygons():
     try:
-        resp = requests.get(f'http://{gs_ip}:{gs_port}/get-polygons', timeout=5)
+        resp = requests.get(f'http://{config.gs_ip}:{config.gs_port}/get-polygons', timeout=5)
         if resp.status_code == 200:
             polygons_geojson = resp.json()
             polygons = [shape(p['geometry']).buffer(BUFFER_RADIUS) for p in polygons_geojson]
@@ -45,7 +35,7 @@ def get_polygons():
 
 def get_goal_position():
     try:
-        resp = requests.get(f'http://{gs_ip}:{gs_port}/get-goal', timeout=5)
+        resp = requests.get(f'http://{config.gs_ip}:{config.gs_port}/get-goal', timeout=5)
         if resp.status_code == 404:
             print("Brak zapisanego celu")
             return None
@@ -67,14 +57,14 @@ def droneAtGoal(pos, goal):
     return distance(pos, goal).meters < 4
 
 def post_next_position(lat, lon, machine_id):
-    requests.post(f'http://{gs_ip}:{gs_port}/post-next_position', json = {'type': 'gps', 'id': machine_id, 'lat': lat, 'lon': lon})
+    requests.post(f'http://{config.gs_ip}:{config.gs_port}/post-next_position', json = {'type': 'gps', 'id': machine_id, 'lat': lat, 'lon': lon})
 
 def lider_drone_controller(machine_id, target):
-    global pos
+    global posin
     last_positions = deque(maxlen=4)
     while True:
-        pos_data = get_current_position(machine_id)
-        target_pos_data = get_current_position(target)
+        pos_data = config.get_current_position(machine_id)
+        target_pos_data = config.get_current_position(target)
 
         if not pos_data:
             print("Brak danych o pozycji drona - lider")
@@ -123,10 +113,10 @@ def lider_drone_controller(machine_id, target):
 def relay_drone_controller(machine_id, target_master, target_lider):
      last_positions = deque(maxlen=4)
      while True:
-        pos = get_current_position(machine_id)
+        pos = config.get_current_position(machine_id)
         last_positions.append((pos['lat'], pos['lon']))
-        master_pos = get_current_position(target_master)
-        lider_pos = get_current_position(target_lider)
+        master_pos = config.get_current_position(target_master)
+        lider_pos = config.get_current_position(target_lider)
         if not pos or not master_pos or not lider_pos:
             time.sleep(2)
             continue
@@ -171,15 +161,11 @@ def start_all_drones(drones):
         t.start()
         threads.append(t)
     return threads
+
 if __name__ == "__main__":
-    drones = [
-        {"id": "dron1", "role": "master"}, # id do zmiany !!! (dron 1 przyjmuje stala pozycje, nie jest kontrolowany przez algorytm)
-        {"id": "dron2", "role": "relay", "target": "dron1", "target_lider": "dron3"},# id do zmiany !!!
-        {"id": "dron3", "role": "lider", "target": "dron2"}# id do zmiany !!!
-    ]
     rssi_thread = threading.Thread(target=rssi_updater, daemon=True)
     rssi_thread.start()
 
-    threads = start_all_drones(drones)
+    threads = start_all_drones(config.drones)
     for t in threads:
         t.join()
