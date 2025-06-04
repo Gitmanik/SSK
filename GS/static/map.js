@@ -2,7 +2,8 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DOMContentLoaded');
     var map = L.map('map').setView([54.372158, 18.638306], 14);
     L.tileLayer('tiles/{z}/{x}/{y}.png', {
-        maxZoom: 18,
+        maxNativeZoom:18,
+        maxZoom:25,
         attribution: 'UMP-pcPL'
     }).addTo(map);
 
