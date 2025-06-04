@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     var dronesLayer = L.layerGroup().addTo(map);
+    var nextPositionLayer = L.layerGroup().addTo(map);
+
     function updateDrones() {
         fetch('/get-drones')
             .then(response => {
@@ -48,6 +50,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     addTo(map).bindPopup(`${marker.machine_id}`);
                     dronesLayer.addLayer(m);
                 });
+
+                fetch('/get-next_position')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Błąd odpowiedzi z serwera przy pobieraniu pozycji');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    nextPositionLayer.clearLayers();
+
+                    data.forEach(function(item) {
+                        var lat = item.lat;
+                        var lon = item.lon;
+                        var id = item.id;
+                        var marker = L.marker([lat, lon])
+                            .bindPopup(`${id}`);
+                        nextPositionLayer.addLayer(marker);
+
+
+                        var drone = dronesLayer.getLayers().find((el) => el._popup._content === id);
+                        var linepos = [];
+                        linepos.push(drone._latlng);
+                        linepos.push([lat, lon]);
+                        var line = L.polyline(linepos);
+                        nextPositionLayer.addLayer(line);
+                    });
+            })
+            .catch(err => {
+                console.error('Błąd podczas aktualizacji pozycji:', err);
+            });
+
             })
             .catch(err => {
                 console.error('Błąd podczas aktualizacji pozycji:', err);
